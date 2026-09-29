@@ -1,0 +1,34 @@
+name: Refresh scanner feeds
+
+on:
+  schedule:
+    - cron: "0 10 1 * *"   # 1st of every month, 10:00 UTC
+  workflow_dispatch: {}      # adds a "Run workflow" button for manual runs
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Rebuild feed files
+        run: python scripts/build_feeds.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "feed-bot"
+          git config user.email "feed-bot@users.noreply.github.com"
+          git add feed_scanners_censys.txt feed_scanners_rootevidence.txt
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "Monthly scanner feed refresh"
+            git push
+          fi
